@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseCsv, isValidEmail } from './csvParser'
+import { parseCsv, isValidEmail, isValidCountryCode } from './csvParser'
 
 describe('isValidEmail', () => {
   it('should return true for valid email addresses', () => {
@@ -17,6 +17,24 @@ describe('isValidEmail', () => {
     expect(isValidEmail('test.example.com')).toBe(false)
     expect(isValidEmail('test@.com')).toBe(false)
     expect(isValidEmail('test@example')).toBe(false)
+  })
+})
+
+describe('isValidCountryCode', () => {
+  it('should return true for real ISO country codes, any casing', () => {
+    expect(isValidCountryCode('US')).toBe(true)
+    expect(isValidCountryCode('es')).toBe(true)
+    expect(isValidCountryCode(' fr ')).toBe(true)
+    expect(isValidCountryCode('UK')).toBe(true)
+  })
+
+  it('should return false for values that are not country codes', () => {
+    expect(isValidCountryCode('XXX')).toBe(false)
+    expect(isValidCountryCode('12')).toBe(false)
+    expect(isValidCountryCode('840')).toBe(false)
+    expect(isValidCountryCode('E')).toBe(false)
+    expect(isValidCountryCode('XX')).toBe(false)
+    expect(isValidCountryCode('')).toBe(false)
   })
 })
 
@@ -209,6 +227,26 @@ Jane,Johnson,jane@example.com`
     expect(result[1].errors).toContain('First name is required')
     expect(result[1].errors).toContain('Invalid email format')
     expect(result[2].isValid).toBe(true)
+  })
+
+  it('should drop invalid country codes without invalidating the lead', () => {
+    const csv = `firstName,lastName,email,countryCode
+John,Doe,john@example.com,US
+Jane,Smith,jane@example.com,XXX
+Bob,Jones,bob@example.com,12
+Alice,Brown,alice@example.com,es`
+
+    const result = parseCsv(csv)
+
+    expect(result).toHaveLength(4)
+
+    expect(result[0].countryCode).toBe('US')
+    expect(result[1].countryCode).toBeUndefined()
+    expect(result[2].countryCode).toBeUndefined()
+    expect(result[3].countryCode).toBe('ES')
+
+    expect(result.every((lead) => lead.isValid)).toBe(true)
+    expect(result.every((lead) => lead.errors.length === 0)).toBe(true)
   })
 
   it('should handle whitespace in fields', () => {

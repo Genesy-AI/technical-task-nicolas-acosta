@@ -17,6 +17,15 @@ export const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email)
 }
 
+const regionNames = new Intl.DisplayNames(['en'], { type: 'region' })
+
+// ponytail: Intl instead of a hardcoded ISO-3166 table; it returns the input back when the
+// region is unknown. Accepts 'ZZ' ("Unknown Region"), swap in an explicit list if that matters.
+export const isValidCountryCode = (code: string): boolean => {
+  const upper = code.trim().toUpperCase()
+  return /^[A-Z]{2}$/.test(upper) && regionNames.of(upper) !== upper
+}
+
 export const parseCsv = (content: string): CsvLead[] => {
   if (!content?.trim()) {
     throw new Error('CSV content cannot be empty')
@@ -68,7 +77,7 @@ export const parseCsv = (content: string): CsvLead[] => {
           lead.jobTitle = trimmedValue || undefined
           break
         case 'countrycode':
-          lead.countryCode = trimmedValue || undefined
+          lead.countryCode = isValidCountryCode(trimmedValue) ? trimmedValue.toUpperCase() : undefined
           break
         case 'companyname':
           lead.companyName = trimmedValue || undefined
